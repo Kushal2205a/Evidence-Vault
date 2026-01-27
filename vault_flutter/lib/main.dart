@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'serverpod_client.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
 
 
 void main() {
@@ -123,6 +126,8 @@ class VerifyEvidenceScreen  extends StatefulWidget{
 class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
   PlatformFile? _pickedImage;
   bool _picking = false ;
+  String? _sha256;
+  bool _hashing = false;
 
   Future<void> _pickImage() async{
     setState(() => _picking = true);
@@ -135,6 +140,7 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
 
       if(result != null && result.files.isNotEmpty ){
         setState(() => _pickedImage = result.files.first);
+        await _hashin();
 
       }
 
@@ -145,6 +151,39 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
 
     }
   }
+
+  Future<void> _hashin() async{
+    final file = _pickedImage;
+    if (file == null) return ;
+
+    setState(() {
+      _hashing = true;
+      _sha256 = null ;
+    });
+
+    try{
+      Uint8List bytes ;
+      if(file.bytes != null){
+        bytes = file.bytes!;
+      }
+      else if(file.path != null){
+        bytes = await File(file.path!).readAsBytes();
+      }
+      else{
+        throw Exception("No bytes or path available for hashing");
+      }
+
+      final digest = sha256.convert(bytes).toString();
+
+      if(!mounted) return;
+      setState(() => _sha256 = digest);
+    }finally{
+      if(mounted){
+        setState(() => _hashing = false);
+      }
+    }
+  }
+
 
 
   @override
@@ -175,6 +214,10 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
                 label: Text(_picking ? 'Picking...' : 'Pick Image'),
               ),
             ),
+            const SizedBox(height: 8,),
+
+            Align(alignment: Alignment.centerLeft, child: Text(_hashing? 'SHA-256: hashing' : 'SHA-256: ${_sha256 ?? "-"}'),),
+
             const SizedBox(height: 16),
             const SizedBox(width: double.infinity, child: ElevatedButton(onPressed: null, child: Text('Verify (placeholder)'))),
             const Align(alignment: Alignment.centerLeft, child: Text("Result: (placeholder)"),)
@@ -197,6 +240,8 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
   final _noteCtrl = TextEditingController();
   PlatformFile? _pickedImage ;
   bool _picking =  false ;
+  String? _sha256;
+  bool _hashing = false;
 
 
   @override
@@ -217,6 +262,7 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
 
       if (result != null && result.files.isNotEmpty){
         setState(() => _pickedImage = result.files.first);
+        await _hashin();
       }
 
     }finally{
@@ -226,6 +272,38 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
       }
 
 
+    }
+  }
+
+  Future<void> _hashin() async{
+    final file = _pickedImage;
+    if (file == null) return ;
+
+    setState(() {
+      _hashing = true;
+      _sha256 = null ;
+    });
+
+    try{
+      Uint8List bytes ;
+      if(file.bytes != null){
+        bytes = file.bytes!;
+      }
+      else if(file.path != null){
+        bytes = await File(file.path!).readAsBytes();
+      }
+      else{
+        throw Exception("No bytes or path available for hashing");
+      }
+
+      final digest = sha256.convert(bytes).toString();
+
+      if(!mounted) return;
+      setState(() => _sha256 = digest);
+    }finally{
+      if(mounted){
+        setState(() => _hashing = false);
+      }
     }
   }
 
@@ -268,7 +346,11 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
                        onPressed: ()=> {},
                        label: Text("Save (placeholder)"))
 
-              )
+              ),
+
+              const SizedBox(height: 8,),
+
+              Align(alignment: Alignment.centerLeft, child: Text(_hashing? 'SHA-256: hashing' : 'SHA-256: ${_sha256 ?? "-"}'),)
 
 
 
