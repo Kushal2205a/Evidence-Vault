@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
+import 'package:vault_client/vault_client.dart';
 
 
 void main() {
@@ -95,24 +96,63 @@ class HomeScreen extends StatelessWidget{
   }
 }
 
-class EvidenceListScreen  extends StatelessWidget{
+class EvidenceListScreen  extends StatefulWidget{
   const EvidenceListScreen({super.key});
+  @override
+  State<EvidenceListScreen> createState() => _EvidenceListScreenState();
+
+}
+
+class _EvidenceListScreenState extends State<EvidenceListScreen> {
+  bool _loading = true ;
+  String? _error ;
+  List <EvidenceRecord> _records = [];
+
+  @override
+  void initState(){
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async{
+    setState(() {
+      _loading = true ;
+      _error = null ;
+    });
+
+    try {
+      final rows = await client.evidence.listEvidenceRecords();
+      setState(() {
+        _records = rows ;
+      });
+    }catch(e){
+      setState(() {
+        _error = e.toString();
+      });
+    }finally{
+      setState(() {
+        _loading = false;
+      });
+    }
+
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Evidence List")),
-      body: ListView(
-        children: const [
-          ListTile(title : Text('Placeholder rec 1') , subtitle: Text("hash : ..."),),
-          ListTile(title : Text('Placeholder rec 2') , subtitle: Text("hash : ..."),)
+        appBar: AppBar(title: const Text("Evidence List")),
+        body: ListView(
+          children: const [
+            ListTile(title : Text('Placeholder rec 1') , subtitle: Text("hash : ..."),),
+            ListTile(title : Text('Placeholder rec 2') , subtitle: Text("hash : ..."),)
 
 
-        ],
-      )
+          ],
+        )
 
     );
   }
+
 }
 
 class VerifyEvidenceScreen  extends StatefulWidget{
@@ -240,8 +280,13 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
   final _noteCtrl = TextEditingController();
   PlatformFile? _pickedImage ;
   bool _picking =  false ;
+
   String? _sha256;
   bool _hashing = false;
+
+  bool _saving = false ;
+  int? _savedId ;
+  String? _saveError ;
 
 
   @override
@@ -307,6 +352,29 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
     }
   }
 
+  Future<void> _saveEvidence() async {
+    if (_sha256 == null){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Pick an image first"))
+
+      );
+      return;
+    }
+
+    setState(() {
+      _saving = true ;
+      _savedId = null ;
+      _saveError = null ;
+
+    });
+
+    try {
+      final saved =   await client.evidence.createEvidenceRecord(_sha256!, _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim() );
+      setState(() => _savedId = saved.id);
+
+    }catch(e){}finally{}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -343,10 +411,21 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
                 width: double.infinity,
                 child: ElevatedButton.icon(
                        icon: Icon(Icons.save),
-                       onPressed: ()=> {},
-                       label: Text("Save (placeholder)"))
+                       onPressed:  _saving ? null : _saveEvidence,
+                       label: Text("Save"))
 
               ),
+
+              if(_savedId != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Evidence ID : ${_savedId}'),
+                ),
+              if (_saveError != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Save error : ${_saveError}'),
+                ),
 
               const SizedBox(height: 8,),
 

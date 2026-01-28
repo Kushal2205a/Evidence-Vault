@@ -8,5 +8,8 @@ emailIdp:
   - finishPasswordReset:
 jwtRefresh:
   - refreshAccessToken:
+evidence:
+  - createEvidenceRecord:
+  - listEvidenceRecords:
 greeting:
   - hello:

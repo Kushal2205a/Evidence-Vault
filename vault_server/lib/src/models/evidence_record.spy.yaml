@@ -1,0 +1,6 @@
+class: EvidenceRecord
+table : evidence_records
+fields :
+  hash : String
+  note : String?
+  createdAt : DateTime
