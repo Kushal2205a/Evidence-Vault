@@ -17,8 +17,9 @@ import 'dart:async' as _i3;
 import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
     as _i4;
 import 'package:vault_client/src/protocol/evidence_record.dart' as _i5;
-import 'package:vault_client/src/protocol/greetings/greeting.dart' as _i6;
-import 'protocol.dart' as _i7;
+import 'dart:typed_data' as _i6;
+import 'package:vault_client/src/protocol/greetings/greeting.dart' as _i7;
+import 'protocol.dart' as _i8;
 
 /// By extending [EmailIdpBaseEndpoint], the email identity provider endpoints
 /// are made available on the server and enable the corresponding sign-in widget
@@ -244,12 +245,14 @@ class EndpointEvidence extends _i2.EndpointRef {
   _i3.Future<_i5.EvidenceRecord> createEvidenceRecord(
     String hash,
     String? note,
+    _i6.ByteData? thumbnail,
   ) => caller.callServerEndpoint<_i5.EvidenceRecord>(
     'evidence',
     'createEvidenceRecord',
     {
       'hash': hash,
       'note': note,
+      'thumbnail': thumbnail,
     },
   );
 
@@ -283,8 +286,8 @@ class EndpointGreeting extends _i2.EndpointRef {
   String get name => 'greeting';
 
   /// Returns a personalized greeting message: "Hello {name}".
-  _i3.Future<_i6.Greeting> hello(String name) =>
-      caller.callServerEndpoint<_i6.Greeting>(
+  _i3.Future<_i7.Greeting> hello(String name) =>
+      caller.callServerEndpoint<_i7.Greeting>(
         'greeting',
         'hello',
         {'name': name},
@@ -322,7 +325,7 @@ class Client extends _i2.ServerpodClientShared {
     bool? disconnectStreamsOnLostInternetConnection,
   }) : super(
          host,
-         _i7.Protocol(),
+         _i8.Protocol(),
          securityContext: securityContext,
          streamingConnectionTimeout: streamingConnectionTimeout,
          connectionTimeout: connectionTimeout,

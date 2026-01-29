@@ -1,10 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:serverpod/serverpod.dart';
 import '../generated/protocol.dart';
 
 class EvidenceEndpoint extends Endpoint{
 
-  Future<EvidenceRecord> createEvidenceRecord(Session session, String hash, String? note,) async{
-    final row = EvidenceRecord(hash: hash, note: note , createdAt: DateTime.now());
+  Future<EvidenceRecord> createEvidenceRecord(Session session, String hash, String? note, ByteData? thumbnail) async{
+    final row = EvidenceRecord(hash: hash, note: note , createdAt: DateTime.now(), thumbnail: thumbnail);
     return await EvidenceRecord.db.insertRow(session, row);
   }
 

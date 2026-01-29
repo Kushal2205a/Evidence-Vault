@@ -15,10 +15,11 @@ import '../auth/email_idp_endpoint.dart' as _i2;
 import '../auth/jwt_refresh_endpoint.dart' as _i3;
 import '../endpoints/evidence_endpoint.dart' as _i4;
 import '../greetings/greeting_endpoint.dart' as _i5;
+import 'dart:typed_data' as _i6;
 import 'package:serverpod_auth_idp_server/serverpod_auth_idp_server.dart'
-    as _i6;
-import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _i7;
+import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
+    as _i8;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
@@ -260,6 +261,11 @@ class Endpoints extends _i1.EndpointDispatch {
               type: _i1.getType<String?>(),
               nullable: true,
             ),
+            'thumbnail': _i1.ParameterDescription(
+              name: 'thumbnail',
+              type: _i1.getType<_i6.ByteData?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -270,6 +276,7 @@ class Endpoints extends _i1.EndpointDispatch {
                     session,
                     params['hash'],
                     params['note'],
+                    params['thumbnail'],
                   ),
         ),
         'listEvidenceRecords': _i1.MethodConnector(
@@ -333,9 +340,9 @@ class Endpoints extends _i1.EndpointDispatch {
         ),
       },
     );
-    modules['serverpod_auth_idp'] = _i6.Endpoints()
+    modules['serverpod_auth_idp'] = _i7.Endpoints()
       ..initializeEndpoints(server);
-    modules['serverpod_auth_core'] = _i7.Endpoints()
+    modules['serverpod_auth_core'] = _i8.Endpoints()
       ..initializeEndpoints(server);
   }
 }
