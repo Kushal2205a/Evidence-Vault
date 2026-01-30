@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:vault_client/vault_client.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 
 
 
@@ -20,7 +21,7 @@ class VaultApp extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp( title: "Evidence Vault" , home: HomeScreen() ,
+    return MaterialApp( title: "Proof Butler" , home: HomeScreen() ,
       theme: ThemeData(useMaterial3: true , colorScheme: ColorScheme.dark()),);
   }
 }
@@ -47,7 +48,7 @@ class HomeScreen extends StatelessWidget{
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: const Text("Home"), actions: [IconButton(tooltip: 'Ping Backend', onPressed: ()=> _serverCall(context), icon: const Icon(Icons.cloud)), ], ),
+        appBar: AppBar(title: const Text("Home"),  ),
         body: Padding(padding: const EdgeInsets.all(16),
           child: Column(
 
@@ -60,7 +61,7 @@ class HomeScreen extends StatelessWidget{
                        onPressed: ()  {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateEvidenceScreen()));
                        },
-                       label: const  Text("Add Evidence")
+                       label: const  Text("Create Proof")
                 ),
               ),
 
@@ -70,7 +71,7 @@ class HomeScreen extends StatelessWidget{
                 width: double.infinity,
                 child: ElevatedButton.icon(
                     onPressed: (){ Navigator.push(context, MaterialPageRoute(builder: (_) => const VerifyEvidenceScreen()));},
-                    label: const Text("Verify Evidence"),
+                    label: const Text("Verify Proof"),
                     icon: Icon(Icons.verified),
                 ),
 
@@ -83,7 +84,7 @@ class HomeScreen extends StatelessWidget{
                     onPressed: ()  {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const EvidenceListScreen()));
                     },
-                    label: const  Text("Evidence List")
+                    label: const  Text("My Proofs")
                 ),
               ),
 
@@ -143,7 +144,7 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: const Text("Evidence List")),
+        appBar: AppBar(title: const Text("My Proofs")),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : (_error != null) ? Center( child: Padding(padding: const EdgeInsets.all(16), child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Error: ${_error}'), const SizedBox(height: 12,), ElevatedButton(onPressed: _load, child: const Text('Retry'))],),),)
@@ -151,6 +152,9 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
               final r  = _records[i];
               final title = (r.note != null && r.note!.trim().isNotEmpty) ? r.note!.trim() : '(untitled)';
               final shortHash = r.hash.length > 8 ? r.hash.substring(0,8) : r.hash;
+
+              final thumb = r.thumbnail;
+              final thumbBytes = thumb == null ? null : thumb.buffer.asUint8List(thumb.offsetInBytes, thumb.lengthInBytes);
 
             return ListTile(
               title: Text(title, style: Theme.of(context).textTheme.titleMedium,),
@@ -160,14 +164,22 @@ class _EvidenceListScreenState extends State<EvidenceListScreen> {
                 children: [
                   Text(shortHash),
                   IconButton(tooltip: 'Copy' , onPressed: (){
-                    final text = 'Evidence ID : ${r.id ?? "-"}\nTitle: $title\nHash ${r.hash}\nCreated At: ${r.createdAt}';
+                    final text = 'Proof ID: ${r.id ?? "-"}\nTitle: $title\nHash: ${r.hash}\nCreated At: ${r.createdAt}';
                     Clipboard.setData(ClipboardData(text: text));
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Copied Evidence Details")));
                   }, icon: const Icon(Icons.copy))
                 ],
               ),
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child : thumbBytes == null ? Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.image),
 
-              isThreeLine: true,
+                ) : Image.memory(thumbBytes, height: 56, width: 56,fit: BoxFit.cover,)
+              ),
             );
             }), onRefresh: _load)
 
@@ -258,6 +270,7 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
       setState(() {
         _records = rows;
         _selected = rows.isNotEmpty ? rows.first : null ;
+        _storedHash = _selected?.hash;
       });
     }catch(e){
       if (!mounted) return ;
@@ -265,7 +278,8 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
         _recordsError = e.toString();
       });
     }finally{
-      if(mounted) _loadingRecords = false ;
+      if(mounted) setState(() {
+        _loadingRecords = false ;});
     }
   }
   Future<void> _pickImage() async{
@@ -328,7 +342,7 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
   @override
   Widget build(BuildContext context){
     return Scaffold(
-      appBar: AppBar(title: const Text("Verify Evidence"),) ,
+      appBar: AppBar(title: const Text("Verify Proof"),) ,
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -346,14 +360,14 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
                 items : _records.map((r){
                   return DropdownMenuItem<EvidenceRecord>(
                     value: r,
-                    child: Text('ID ${r.id ?? "-"}'),
+                    child: Text('Title: ${r.note} ID: ${r.id ?? "-"}'),
                   );
                 }).toList(),
                 onChanged: (v){
                   setState(() {
                     _selected = v ;
                     _match = null ;
-                    _storedHash = null ;
+                    _storedHash = v?.hash;
                     _verifyError = null ;
                   });
                 },
@@ -389,7 +403,7 @@ class _VerifyEvidenceScreenState extends State<VerifyEvidenceScreen>{
                   ? 'Error: $_verifyError'
                   : (_match == null)
                   ? 'Result: -'
-                  : (_match! ? 'Result: MATCH' : 'Result: MISMATCH : The Image was tampered'),
+                  : (_match! ? 'Result: MATCH' : 'Result: MISMATCH (file differs)'),
                  ),),
 
             if (_storedHash != null)
@@ -426,6 +440,8 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
   int? _savedId ;
   String? _saveError ;
 
+  ByteData? _thumbnail;
+
 
   @override
   void dispose()
@@ -446,6 +462,7 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
       if (result != null && result.files.isNotEmpty){
         setState(() => _pickedImage = result.files.first);
         await _hashin();
+        await _makeThumbnail();
       }
 
     }finally{
@@ -490,14 +507,48 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
     }
   }
 
+  Future<void> _makeThumbnail() async{
+    debugPrint('Picked ext: ${_pickedImage?.extension}, bytes: ${_pickedImage?.bytes?.length}');
+
+    final file = _pickedImage;
+    if (file == null) return ;
+
+    Uint8List bytes ;
+    if(file.bytes != null) {
+      bytes = file.bytes!;
+    }else if (file.path != null){
+      bytes = await File(file.path!).readAsBytes();
+    }else{
+      return ;
+    }
+
+    final decodedImage = img.decodeImage(bytes);
+    if (decodedImage == null) return ;
+
+    final thumb = img.copyResize(decodedImage, width: 96);
+    final jpg = img.encodeJpg(thumb,quality: 70);
+
+    setState(() {
+      _thumbnail = ByteData.view(Uint8List.fromList(jpg).buffer);
+
+    });
+
+  }
+
   Future<void> _saveEvidence() async {
     if (_sha256 == null){
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pick an image first"))
 
       );
+
       return;
     }
+
+    if (_thumbnail == null && _pickedImage != null) {
+      await _makeThumbnail();
+    }
+
 
     final title = _noteCtrl.text.trim();
     if(title.isEmpty){
@@ -517,16 +568,20 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
     });
 
     try {
-      final saved =   await client.evidence.createEvidenceRecord(_sha256!, title );
+      final saved =   await client.evidence.createEvidenceRecord(_sha256!, title, _thumbnail);
       setState(() => _savedId = saved.id);
 
-    }catch(e){}finally{}
+    }catch(e){
+      setState(() => _saveError = e.toString());
+    }finally{
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Create Evidence")),
+      appBar: AppBar(title: const Text("Create Proof")),
       body: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -574,8 +629,8 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
                   final title = _noteCtrl.text.trim().isEmpty ? '(untitled)' : _noteCtrl.text.trim();
                   final text = 'Evidence ID: $_savedId\nTitle: $title';
                   Clipboard.setData(ClipboardData(text: text));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied Evidence details')),);
-                }, icon: const Icon(Icons.copy), label: const Text('Copy Evidence ID'),),
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied Proof details')),);
+                }, icon: const Icon(Icons.copy), label: const Text('Copy Proof ID'),),
               if (_saveError != null)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -584,7 +639,9 @@ class _CreateEvidenceScreenState  extends State<CreateEvidenceScreen>{
 
               const SizedBox(height: 8,),
 
-              Align(alignment: Alignment.centerLeft, child: Text(_hashing? 'SHA-256: hashing' : 'SHA-256: ${_sha256 ?? "-"}'),)
+              Align(alignment: Alignment.centerLeft, child: Text(_hashing? 'SHA-256: hashing' : 'SHA-256: ${_sha256 ?? "-"}'),),
+
+
 
 
 

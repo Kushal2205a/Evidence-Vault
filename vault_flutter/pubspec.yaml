@@ -39,6 +39,14 @@ dependencies:
   cupertino_icons: ^1.0.8
   file_picker: ^8.1.2
   crypto: ^3.0.6
+  image: ^4.2.0
+  flutter_launcher_icons: ^0.13.1
+
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "Vault_Butler.png"
 
 
 
